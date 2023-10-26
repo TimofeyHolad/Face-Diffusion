@@ -3,10 +3,6 @@ import torch
 import torch.nn as nn 
 
 
-torch.backends.cuda.enable_flash_sdp(True)
-torch.backends.cuda.enable_mem_efficient_sdp(False)
-torch.backends.cuda.enable_math_sdp(False)
-
 class AttentionBlock(nn.Module):
     def __init__(self, in_channels, img_size, num_heads=8, activation=nn.GELU):
         super().__init__()
