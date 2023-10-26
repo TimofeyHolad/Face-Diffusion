@@ -21,8 +21,8 @@ class Diffusion:
         self.alphas = 1 - self.betas
         self.alphas_cumprod = torch.cumprod(self.alphas, dim=0)
         
-        self.Unet = Unet(img_size=img_size, model_size=model_size, timestamps_num=T, in_channels=3, base_channels=64, out_channels=3).to(device, dtype=dtype)
-        self.optimizer = optimizer(self.Unet.parameters(), lr=lr)
+        self.unet = Unet(img_size=img_size, model_size=model_size, timestamps_num=T, in_channels=3, base_channels=64, out_channels=3).to(device, dtype=dtype)
+        self.optimizer = optimizer(self.unet.parameters(), lr=lr)
         self.criterion = criterion()
         self.scaler = torch.cuda.amp.GradScaler()
         
@@ -51,23 +51,23 @@ class Diffusion:
     
     def save_state_dict(self, checkpoint_path):
         torch.save({
-            'Unet': self.Unet.state_dict(),
+            'Unet': self.unet.state_dict(),
             'optimizer': self.optimizer.state_dict(),
             'scaler': self.scaler.state_dict()
         }, checkpoint_path)
         
     def load_state_dict(self, checkpoint_path):
         checkpoint = torch.load(checkpoint_path, map_location=self.device)
-        self.Unet.load_state_dict(checkpoint['Unet'])
+        self.unet.load_state_dict(checkpoint['Unet'])
         self.optimizer.load_state_dict(checkpoint['optimizer'])
         self.scaler.load_state_dict(checkpoint['scaler'])
-        self.Unet.to(self.device)
+        self.unet.to(self.device)
     
-    def train_backward(self, loader, epochs=50, checkpoint_path='checkpoint.pth'):
+    def train(self, loader, epochs=50, checkpoint_path='checkpoint.pth'):
         control_noise = torch.randn(size=(1, 3, self.img_size, self.img_size), device=self.device, dtype=self.dtype)
         losses = []
         
-        self.Unet.train()
+        self.unet.train()
         for epoch in trange(epochs):
             print('---------------------------------------------')
             print(f'{epoch+1}/{epochs}:')
@@ -77,10 +77,8 @@ class Diffusion:
                 with torch.autocast(device_type='cuda', dtype=torch.float16):
                     t = torch.randint(high=self.T, size=(x.shape[0],))
                     noisy_x, noise = self.get_noisy_image(x, t)
-                    noise_pred = self.Unet(noisy_x, t)
+                    noise_pred = self.unet(noisy_x, t)
                     loss = self.criterion(noise_pred, noise)
-                    #loss.backward()
-                #optimizer.step()
                 self.scaler.scale(loss).backward()
                 self.scaler.step(self.optimizer)
                 self.scaler.update()
@@ -91,8 +89,6 @@ class Diffusion:
                 self.backward_show(control_noise)
             if (epoch + 1) % 50 == 0:
                 self.save_state_dict(checkpoint_path=checkpoint_path)
-            #img = self.sample(control_noise)
-            #self.image_show(img)
             plt.show()
         return losses
     
@@ -100,11 +96,11 @@ class Diffusion:
     def sample(self, x=None):
         if x is None:
             x = torch.randn(size=(1, 3, self.img_size, self.img_size), device=self.device, dtype=self.dtype)
-        self.Unet.eval()
+        self.unet.eval()
         for t in reversed(range(self.T)):
             yield x[0]
             with torch.autocast(device_type=self.device.type, dtype=torch.float16):
-                noise = self.Unet(x, t)
+                noise = self.unet(x, t)
             x = (x - ((1 - self.alphas[t])/torch.sqrt(1 - self.alphas_cumprod[t])) * noise)
             z = torch.randn_like(x)
             sigma = torch.sqrt(self.betas[t] * (1 - self.alphas_cumprod[t-1]) / (1 - self.alphas_cumprod[t]))

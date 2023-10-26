@@ -34,25 +34,25 @@ class AttentionBlock(nn.Module):
         return x
     
 class TimeEncoder(nn.Module):
-    def __init__(self, timestamps_num, time_embedings_size, n=10000):
+    def __init__(self, timestamps_num, time_embeddings_size, n=10000):
         super().__init__()
-        time_embedings_size = (time_embedings_size // 2) * 2
+        time_embeddings_size = (time_embeddings_size // 2) * 2
         k = torch.arange(timestamps_num)[:, None]
-        i = torch.arange(time_embedings_size / 2)[None, :]
+        i = torch.arange(time_embeddings_size / 2)[None, :]
         
-        x = k / (n ** (2 * i / time_embedings_size))
-        self.embedings = torch.zeros(size=(timestamps_num, time_embedings_size), requires_grad=False)
-        self.embedings[:, 0::2] = torch.sin(x)
-        self.embedings[:, 1::2] = torch.cos(x)
+        x = k / (n ** (2 * i / time_embeddings_size))
+        self.embeddings = torch.zeros(size=(timestamps_num, time_embeddings_size), requires_grad=False)
+        self.embeddings[:, 0::2] = torch.sin(x)
+        self.embeddings[:, 1::2] = torch.cos(x)
         
     def forward(self, t):
         if isinstance(t, int):
             t = torch.tensor(t)[None]
-        embedings = self.embedings[t]
-        return embedings
+        embeddings = self.embeddings[t]
+        return embeddings
     
 class DoubleConv2d(nn.Module):
-    def __init__(self, in_channels, mid_channels, out_channels, time_embedings_size, time_activation=nn.SiLU, activation=nn.GELU, concat_input=False, residual_connection=False):
+    def __init__(self, in_channels, mid_channels, out_channels, time_embeddings_size, time_activation=nn.SiLU, activation=nn.GELU, concat_input=False, residual_connection=False):
         super().__init__()
         self.concat_input = concat_input
         self.residual_connection = residual_connection
@@ -64,7 +64,7 @@ class DoubleConv2d(nn.Module):
         self.norm1 = nn.BatchNorm2d(mid_channels)
         self.act1 = activation()
         
-        self.time_linear = nn.Linear(in_features=time_embedings_size, out_features=mid_channels)
+        self.time_linear = nn.Linear(in_features=time_embeddings_size, out_features=mid_channels)
         self.time_act = time_activation()
         
         self.conv2 = nn.Conv2d(in_channels=mid_channels, out_channels=out_channels, kernel_size=3, stride=1, padding=1)
@@ -89,14 +89,14 @@ class DoubleConv2d(nn.Module):
         return x
     
 class DownBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, time_embedings_size, time_activation=nn.SiLU, activation=nn.GELU, residual_connection=False):
+    def __init__(self, in_channels, out_channels, time_embeddings_size, time_activation=nn.SiLU, activation=nn.GELU, residual_connection=False):
         super().__init__()
         
         self.down_conv = nn.Conv2d(in_channels=in_channels, out_channels=in_channels, kernel_size=4, stride=2, padding=1)
         self.down_norm = nn.BatchNorm2d(in_channels)
         self.down_act = activation()
         
-        self.double_conv = DoubleConv2d(in_channels=in_channels, mid_channels=out_channels, out_channels=out_channels, time_embedings_size=time_embedings_size, time_activation=time_activation, activation=activation, concat_input=False, residual_connection=residual_connection)
+        self.double_conv = DoubleConv2d(in_channels=in_channels, mid_channels=out_channels, out_channels=out_channels, time_embeddings_size=time_embeddings_size, time_activation=time_activation, activation=activation, concat_input=False, residual_connection=residual_connection)
         
     
     def forward(self, x, t):
@@ -105,11 +105,11 @@ class DownBlock(nn.Module):
         return x
     
 class UpBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, time_embedings_size, time_activation=nn.SiLU, activation=nn.GELU, concat_input=False, residual_connection=False):
+    def __init__(self, in_channels, out_channels, time_embeddings_size, time_activation=nn.SiLU, activation=nn.GELU, concat_input=False, residual_connection=False):
         super().__init__()
         self.residual_conection = concat_input
         
-        self.double_conv = DoubleConv2d(in_channels=in_channels, mid_channels=in_channels, out_channels=in_channels, time_embedings_size=time_embedings_size, time_activation=time_activation, activation=activation, concat_input=concat_input, residual_connection=residual_connection)
+        self.double_conv = DoubleConv2d(in_channels=in_channels, mid_channels=in_channels, out_channels=in_channels, time_embeddings_size=time_embeddings_size, time_activation=time_activation, activation=activation, concat_input=concat_input, residual_connection=residual_connection)
         
         self.up_conv = nn.ConvTranspose2d(in_channels=in_channels, out_channels=out_channels, kernel_size=4, stride=2, padding=1)
         self.up_norm = nn.BatchNorm2d(out_channels)
@@ -122,7 +122,7 @@ class UpBlock(nn.Module):
         return x
     
 class Unet(nn.Module):
-    def __init__(self, img_size, model_size, timestamps_num, in_channels, out_channels, base_channels=32, time_embedings_size=32, time_activation=nn.SiLU, activation=nn.GELU, residual_connection=True):
+    def __init__(self, img_size, model_size, timestamps_num, in_channels, out_channels, base_channels=32, time_embeddings_size=32, time_activation=nn.SiLU, activation=nn.GELU, residual_connection=True):
         assert img_size // (2 ** model_size) >= 1, 'model_size is too big'
         super().__init__()
         self.img_size            = img_size
@@ -131,26 +131,26 @@ class Unet(nn.Module):
         self.out_channels        = out_channels
         self.base_channels       = base_channels
         self.timestamps_num      = timestamps_num
-        self.time_embedings_size = time_embedings_size
+        self.time_embeddings_size = time_embeddings_size
         
-        self.time_encoder = TimeEncoder(timestamps_num=timestamps_num, time_embedings_size=time_embedings_size)
+        self.time_encoder = TimeEncoder(timestamps_num=timestamps_num, time_embeddings_size=time_embeddings_size)
         
         self.entry_conv = DoubleConv2d(
-                              in_channels=in_channels, 
-                              mid_channels=base_channels, 
-                              out_channels=base_channels, 
-                              time_embedings_size=time_embedings_size, 
-                              time_activation=time_activation, 
-                              activation=activation, 
-                              concat_input=False, 
-                              residual_connection=residual_connection
-                          )
+            in_channels=in_channels, 
+            mid_channels=base_channels, 
+            out_channels=base_channels, 
+            time_embeddings_size=time_embeddings_size, 
+            time_activation=time_activation, 
+            activation=activation, 
+            concat_input=False, 
+            residual_connection=residual_connection
+        )
         self.downs_attentions = nn.ModuleList([AttentionBlock(in_channels=base_channels * (2 ** i), img_size=int(img_size / (2 ** i)))
                                                for i in range(model_size - 1)])
         self.downs = nn.ModuleList([DownBlock(
                                         in_channels=base_channels * (2 ** i), 
                                         out_channels=base_channels * (2 ** (i + 1)), 
-                                        time_embedings_size=time_embedings_size, 
+                                        time_embeddings_size=time_embeddings_size, 
                                         time_activation=time_activation,
                                         activation=activation,
                                         residual_connection=residual_connection
@@ -172,7 +172,7 @@ class Unet(nn.Module):
             in_channels=base_channels * (2 ** (model_size - 1)), 
             mid_channels=base_channels * (2 ** model_size), 
             out_channels=base_channels * (2 ** (model_size - 1)), 
-            time_embedings_size=time_embedings_size, 
+            time_embeddings_size=time_embeddings_size, 
             time_activation=time_activation,
             activation=activation, 
             concat_input=False,
@@ -193,7 +193,7 @@ class Unet(nn.Module):
         self.ups = nn.ModuleList([UpBlock(
                                       in_channels=base_channels * (2 ** i), 
                                       out_channels=base_channels * (2 ** (i - 1)), 
-                                      time_embedings_size=time_embedings_size, 
+                                      time_embeddings_size=time_embeddings_size, 
                                       time_activation=time_activation,
                                       activation=activation,
                                       concat_input=True, 
@@ -203,15 +203,15 @@ class Unet(nn.Module):
         self.ups_attentions = nn.ModuleList([AttentionBlock(in_channels=base_channels * (2 ** (i - 1)), img_size=int(img_size / (2 ** (i - 1))))
                                              for i in range(model_size - 1, 0, -1)])
         self.exit_conv = DoubleConv2d(
-                             in_channels=base_channels, 
-                             mid_channels=base_channels, 
-                             out_channels=base_channels, 
-                             time_embedings_size=32, 
-                             time_activation=time_activation, 
-                             activation=activation, 
-                             concat_input=True, 
-                             residual_connection=residual_connection
-                         )
+            in_channels=base_channels, 
+            mid_channels=base_channels, 
+            out_channels=base_channels, 
+            time_embeddings_size=32, 
+            time_activation=time_activation, 
+            activation=activation, 
+            concat_input=True, 
+            residual_connection=residual_connection
+        )
         self.out_conv = nn.Conv2d(in_channels=base_channels, out_channels=out_channels, kernel_size=1, stride=1, padding=0)
         
     def forward(self, x, t):
