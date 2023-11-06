@@ -7,7 +7,21 @@ import matplotlib.pyplot as plt
 
 
 class Diffusion:
-    def __init__(self, Unet, T=1000, beta_start=1e-4, beta_end=0.02, img_size=64, model_size=5, base_channels=64, lr=1e-4, optimizer=torch.optim.AdamW, criterion=nn.MSELoss, device='cpu', dtype=torch.float16):
+    def __init__(
+        self, 
+        Unet, 
+        T=1000, 
+        beta_start=1e-4, 
+        beta_end=0.02, 
+        img_size=64, 
+        model_size=5, 
+        base_channels=64, 
+        lr=1e-4, 
+        optimizer=torch.optim.AdamW, 
+        criterion=nn.MSELoss, 
+        device='cpu', 
+        dtype=torch.float16,
+    ):
         self.T = T
         self.beta_start = beta_start
         self.beta_end = beta_end
@@ -21,7 +35,14 @@ class Diffusion:
         self.alphas = 1 - self.betas
         self.alphas_cumprod = torch.cumprod(self.alphas, dim=0)
         
-        self.unet = Unet(img_size=img_size, model_size=model_size, timestamps_num=T, in_channels=3, base_channels=64, out_channels=3).to(device, dtype=dtype)
+        self.unet = Unet(
+            img_size=img_size, 
+            model_size=model_size, 
+            timestamps_num=T, 
+            in_channels=3, 
+            base_channels=base_channels, 
+            out_channels=3
+        ).to(device, dtype=dtype)
         self.optimizer = optimizer(self.unet.parameters(), lr=lr)
         self.criterion = criterion()
         self.scaler = torch.cuda.amp.GradScaler()
@@ -47,7 +68,8 @@ class Diffusion:
         if isinstance(t, int):
             t = torch.tensor(t)[None]
         noise = torch.randn_like(x, device=self.device, dtype=self.dtype)
-        return x * torch.sqrt(self.alphas_cumprod[t])[:, None, None, None] + noise * torch.sqrt(1 - self.alphas_cumprod[t])[:, None, None, None], noise
+        noisy_x = x * torch.sqrt(self.alphas_cumprod[t])[:, None, None, None] + noise * torch.sqrt(1 - self.alphas_cumprod[t])[:, None, None, None]
+        return noisy_x, noise
     
     def save_state_dict(self, checkpoint_path):
         torch.save({

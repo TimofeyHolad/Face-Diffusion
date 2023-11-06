@@ -48,7 +48,17 @@ class TimeEncoder(nn.Module):
         return embeddings
     
 class DoubleConv2d(nn.Module):
-    def __init__(self, in_channels, mid_channels, out_channels, time_embeddings_size, time_activation=nn.SiLU, activation=nn.GELU, concat_input=False, residual_connection=False):
+    def __init__(
+        self, 
+        in_channels, 
+        mid_channels, 
+        out_channels, 
+        time_embeddings_size, 
+        time_activation=nn.SiLU, 
+        activation=nn.GELU, 
+        concat_input=False, 
+        residual_connection=False
+    ):
         super().__init__()
         self.concat_input = concat_input
         self.residual_connection = residual_connection
@@ -85,14 +95,31 @@ class DoubleConv2d(nn.Module):
         return x
     
 class DownBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, time_embeddings_size, time_activation=nn.SiLU, activation=nn.GELU, residual_connection=False):
+    def __init__(
+        self, 
+        in_channels, 
+        out_channels, 
+        time_embeddings_size, 
+        time_activation=nn.SiLU, 
+        activation=nn.GELU, 
+        residual_connection=False
+    ):
         super().__init__()
         
         self.down_conv = nn.Conv2d(in_channels=in_channels, out_channels=in_channels, kernel_size=4, stride=2, padding=1)
         self.down_norm = nn.BatchNorm2d(in_channels)
         self.down_act = activation()
         
-        self.double_conv = DoubleConv2d(in_channels=in_channels, mid_channels=out_channels, out_channels=out_channels, time_embeddings_size=time_embeddings_size, time_activation=time_activation, activation=activation, concat_input=False, residual_connection=residual_connection)
+        self.double_conv = DoubleConv2d(
+            in_channels=in_channels, 
+            mid_channels=out_channels, 
+            out_channels=out_channels, 
+            time_embeddings_size=time_embeddings_size, 
+            time_activation=time_activation, 
+            activation=activation, 
+            concat_input=False, 
+            residual_connection=residual_connection
+        )
         
     
     def forward(self, x, t):
@@ -101,11 +128,29 @@ class DownBlock(nn.Module):
         return x
     
 class UpBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, time_embeddings_size, time_activation=nn.SiLU, activation=nn.GELU, concat_input=False, residual_connection=False):
+    def __init__(
+        self, 
+        in_channels, 
+        out_channels, 
+        time_embeddings_size, 
+        time_activation=nn.SiLU, 
+        activation=nn.GELU, 
+        concat_input=False, 
+        residual_connection=False
+    ):
         super().__init__()
         self.residual_conection = concat_input
         
-        self.double_conv = DoubleConv2d(in_channels=in_channels, mid_channels=in_channels, out_channels=in_channels, time_embeddings_size=time_embeddings_size, time_activation=time_activation, activation=activation, concat_input=concat_input, residual_connection=residual_connection)
+        self.double_conv = DoubleConv2d(
+            in_channels=in_channels, 
+            mid_channels=in_channels, 
+            out_channels=in_channels, 
+            time_embeddings_size=time_embeddings_size, 
+            time_activation=time_activation, 
+            activation=activation, 
+            concat_input=concat_input, 
+            residual_connection=residual_connection
+        )
         
         self.up_conv = nn.ConvTranspose2d(in_channels=in_channels, out_channels=out_channels, kernel_size=4, stride=2, padding=1)
         self.up_norm = nn.BatchNorm2d(out_channels)
@@ -118,15 +163,27 @@ class UpBlock(nn.Module):
         return x
     
 class Unet(nn.Module):
-    def __init__(self, img_size, model_size, timestamps_num, in_channels, out_channels, base_channels=32, time_embeddings_size=32, time_activation=nn.SiLU, activation=nn.GELU, residual_connection=True):
+    def __init__(
+        self, 
+        img_size, 
+        model_size, 
+        timestamps_num, 
+        in_channels, 
+        out_channels, 
+        base_channels=32, 
+        time_embeddings_size=32, 
+        time_activation=nn.SiLU, 
+        activation=nn.GELU, 
+        residual_connection=True
+    ):
         assert img_size // (2 ** model_size) >= 1, 'model_size is too big'
         super().__init__()
-        self.img_size            = img_size
-        self.model_size          = model_size
-        self.in_channels         = in_channels
-        self.out_channels        = out_channels
-        self.base_channels       = base_channels
-        self.timestamps_num      = timestamps_num
+        self.img_size             = img_size
+        self.model_size           = model_size
+        self.in_channels          = in_channels
+        self.out_channels         = out_channels
+        self.base_channels        = base_channels
+        self.timestamps_num       = timestamps_num
         self.time_embeddings_size = time_embeddings_size
         
         self.time_encoder = TimeEncoder(timestamps_num=timestamps_num, time_embeddings_size=time_embeddings_size)
