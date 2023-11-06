@@ -4,3 +4,5 @@ Diffusion pretrain script based on "Denoising Diffusion Probabilistic Models" an
 For example fake face diffusion generator was trained on [FFHQ small](https://www.kaggle.com/datasets/tommykamaz/faces-dataset-small/) dataset.
 
 ![Example image](/example.png)
+
+Example of script usage is [here](/demo.ipynb).
