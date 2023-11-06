@@ -5,4 +5,4 @@ For example fake face diffusion generator was trained on [FFHQ small](https://ww
 
 ![Example image](/example.png)
 
-Example of script usage is [here](/demo.ipynb).
+Example of script usage for face diffusion training is [here](/demo.ipynb).
